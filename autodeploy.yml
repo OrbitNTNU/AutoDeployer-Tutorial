@@ -1,0 +1,86 @@
+# =============================================================
+# Orbit Autodeploy Template
+# =============================================================
+# Copy this file into your repo at .github/workflows/autodeploy.yml
+# and configure the following:
+#   1. Set the trigger branch (default: main)
+#   2. Replace <team> with: web, devops, or orbit
+#   3. Replace <repo-name> with your project directory name
+#   4. Replace service names with your systemd service names
+#   5. Add your build/test steps where indicated
+#   6. Remove the frontend or backend job if your repo only has one
+# =============================================================
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  # ==================================================
+  # FRONTEND BUILD
+  # ==================================================
+  frontend:
+  # needs: test <-- uncomment to gate behind test job 
+    runs-on: [self-hosted, orbit] # runs on the runners configured with following labels on the github orbit org 
+    steps:
+      - uses: actions/checkout@v4 # clones/pulls the repo onto the runner machine into the current workspace directory (_work folder)
+
+      # ----------------------------------
+      # Add frontend build/test steps here, using the following format:
+        # - name: <Name of Step>
+        #   uses: <Action to Use>   # OR
+        #   run: <terminal/bash commands you wish to run>
+
+        # !Add your steps here!
+
+      # ----------------------------------
+      
+      # change <team> and <repo-name>
+      - name: move to correct service directory
+        run: |
+          mkdir -p /home/orbit/services.<team>/<repo-name> # -p flag, makes all parent directories if they dont exist
+          rsync -a --delete $GITHUB_WORKSPACE/ /home/orbit/services.<team>/<repo-name>/  # syncs content across two directories
+
+      - name: Restart service
+        run: systemctl restart name-of-frontend-service # add the name of the frontend service linked to the repo
+
+  # ==================================================
+  # BACKEND BUILD
+  # ==================================================
+  backend:
+  # needs: test <-- uncomment to gate behind test job 
+    runs-on: [self-hosted, orbit] # runs on the runner with BOTH labels (keep self-hosted just for convention)
+    steps:
+      - uses: actions/checkout@v4 # clones/pulls the repo onto the runner machine into the current workspace directory (_work folder)
+
+      # ----------------------------------
+      # Add backend build/test steps here, using the following format:
+        # - name: <Name of Step>
+        #   uses: <Action to Use>   # OR
+        #   run: <terminal/bash commands you wish to run>
+
+        # !Add your steps here!
+
+      # ----------------------------------
+
+      # change <team> and <repo-name> 
+      - name: move to correct service directory
+        run: |
+          mkdir -p /home/orbit/services.<team>/<repo-name> # -p flag, makes all parent directories if they dont exist
+          rsync -a --delete $GITHUB_WORKSPACE/ /home/orbit/services.<team>/<repo-name>/ # syncs content across two directories
+
+      - name: Restart service
+        run: systemctl restart name-of-backend-service # add the name of the backend service linked to the repo
+
+# ==================================================
+# TESTS (uncomment and configure to gate deployment, indent under <jobs:>)
+# ==================================================
+# test:
+#   runs-on: [self-hosted, orbit]
+#   steps:
+#     - uses: actions/checkout@v4
+#     - name: Run tests
+#       run: echo "Add your test commands here"
+#
+# Then add 'needs: test' to the jobs that require these tests before running themselves
